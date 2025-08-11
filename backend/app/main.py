@@ -1,22 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .core.config import settings
-from .api.v1.routes.dreams import router as dreams_router
+from .api.routes import router as api_router
 
-app = FastAPI(title="d9_dream_app Backend", version="0.1.0")
+app = FastAPI(title="Dream Analysis API", version="0.1.0")
 
-# CORS
-origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(',') if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins or ["*"],
+    allow_origins=["*"],  # TODO: set specific origins for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/health")
-async def health():
+@app.get("/healthz")
+async def healthz():
     return {"status": "ok"}
 
-app.include_router(dreams_router, prefix="/api/v1/dreams", tags=["dreams"])
+app.include_router(api_router, prefix="/api/v1")

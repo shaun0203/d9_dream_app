@@ -1,43 +1,68 @@
-import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb;
-import '../../repositories/auth_repository.dart';
+import 'dart:async';
 
-part 'auth_event.dart';
-part 'auth_state.dart';
+import 'package:bloc/bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
+import 'auth_event.dart';
+import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final AuthRepository _authRepository;
-  AuthBloc(this._authRepository) : super(AuthStateInitial()) {
-    on<AuthEventAppStarted>((event, emit) async {
-      emit(AuthStateLoading());
-      final user = _authRepository.currentUser;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  StreamSubscription<User?>? _sub;
+
+  AuthBloc() : super(AuthInitial()) {
+    on<AppStarted>(_onAppStarted);
+    on<SignInWithGoogleRequested>(_onGoogleSignIn);
+    on<SignOutRequested>(_onSignOut);
+  }
+
+  Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    _sub?.cancel();
+    _sub = _auth.authStateChanges().listen((user) {
       if (user != null) {
-        emit(AuthStateAuthenticated(user));
-      } else {
-        emit(AuthStateUnauthenticated());
-      }
-      await emit.forEach<fb.User?>(_authRepository.authStateChanges, onData: (user) {
-        if (user != null) {
-          return AuthStateAuthenticated(user);
-        }
-        return AuthStateUnauthenticated();
-      });
-    });
-
-    on<AuthEventSignInAnonymously>((event, emit) async {
-      emit(AuthStateLoading());
-      try {
-        final user = await _authRepository.signInAnonymously();
-        emit(AuthStateAuthenticated(user));
-      } catch (e) {
-        emit(AuthStateFailure(e.toString()));
+        addStream(Stream.empty());
       }
     });
+    final user = _auth.currentUser;
+    if (user != null) {
+      emit(Authenticated(user));
+    } else {
+      emit(Unauthenticated());
+    }
+  }
 
-    on<AuthEventSignOut>((event, emit) async {
-      await _authRepository.signOut();
-      emit(AuthStateUnauthenticated());
-    });
+  Future<void> _onGoogleSignIn(SignInWithGoogleRequested event, Emitter<AuthState> emit) async {
+    try {
+      emit(AuthLoading());
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        emit(Unauthenticated());
+        return;
+      }
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final userCred = await _auth.signInWithCredential(credential);
+      emit(Authenticated(userCred.user!));
+    } catch (e) {
+      emit(AuthFailure(e.toString()));
+      emit(Unauthenticated());
+    }
+  }
+
+  Future<void> _onSignOut(SignOutRequested event, Emitter<AuthState> emit) async {
+    await GoogleSignIn().signOut();
+    await _auth.signOut();
+    emit(Unauthenticated());
+  }
+
+  @override
+  Future<void> close() {
+    _sub?.cancel();
+    return super.close();
   }
 }

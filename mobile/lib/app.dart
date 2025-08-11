@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'bloc/auth/auth_bloc.dart';
-import 'ui/screens/login_screen.dart';
-import 'ui/screens/dream_screen.dart';
 
-class App extends StatelessWidget {
-  const App({super.key});
+import 'bloc/auth/auth_bloc.dart';
+import 'presentation/pages/dream_input_page.dart';
+import 'presentation/pages/login_page.dart';
+
+class DreamApp extends StatelessWidget {
+  const DreamApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -17,13 +18,13 @@ class App extends StatelessWidget {
       ),
       home: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
-          if (state is AuthStateAuthenticated) {
-            return const DreamScreen();
-          }
-          if (state is AuthStateLoading) {
+          if (state is AuthLoading) {
             return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
-          return const LoginScreen();
+          if (state is Authenticated) {
+            return const DreamInputPage();
+          }
+          return const LoginPage();
         },
       ),
     );

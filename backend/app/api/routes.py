@@ -1,32 +1,17 @@
-from fastapi import APIRouter, Depends
-from fastapi import HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 
-from app.core.config import settings
-from app.core.firebase import verify_token
-from app.models.schemas import DreamRequest, DreamResponse
-from app.services.ai import analyze_dream
+from ..services.firebase_verify import verify_bearer_token
+from ..services.ai_service import analyze_dream
 
 router = APIRouter()
-security = HTTPBearer(auto_error=False)
 
+class AnalyzeRequest(BaseModel):
+    dream: str
 
-def _require_auth(creds: HTTPAuthorizationCredentials | None):
-    if settings.AUTH_MODE == "none":
-        return None
-    if not creds or creds.scheme.lower() != "bearer":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
-    uid = verify_token(creds.credentials)
-    if not uid:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    return uid
-
-
-@router.post("/dream/analyze", response_model=DreamResponse)
-async def dream_analyze(payload: DreamRequest, creds: HTTPAuthorizationCredentials | None = Depends(security)):
-    _require_auth(creds)
-    try:
-        analysis = await analyze_dream(payload.dream)
-        return DreamResponse(analysis=analysis)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.post("/analyze")
+async def analyze(req: AnalyzeRequest, user=Depends(verify_bearer_token)):
+    if not req.dream.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="dream text required")
+    result = await analyze_dream(req.dream, user_id=user["uid"])  # type: ignore
+    return result

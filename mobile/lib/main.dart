@@ -1,34 +1,32 @@
+import 'dart:async';
+
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'app.dart';
-import 'repositories/auth_repository.dart';
-import 'repositories/dream_repository.dart';
 import 'bloc/auth/auth_bloc.dart';
 import 'bloc/dream/dream_bloc.dart';
-
-// NOTE: Run `flutterfire configure` to generate firebase_options.dart
-// ignore: uri_does_not_exist
-import 'firebase_options.dart' as fo;
+import 'data/repositories/analysis_repository.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: fo.DefaultFirebaseOptions.currentPlatform);
+  await dotenv.load(fileName: 'assets/.env');
 
-  final authRepository = AuthRepository();
-  final dreamRepository = DreamRepository();
+  // Initialize Firebase using generated options.
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  runApp(MultiRepositoryProvider(
+  final analysisRepository = AnalysisRepository(baseUrl: dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000');
+
+  runApp(MultiBlocProvider(
     providers: [
-      RepositoryProvider.value(value: authRepository),
-      RepositoryProvider.value(value: dreamRepository),
+      BlocProvider(create: (_) => AuthBloc()..add(AppStarted())),
+      BlocProvider(create: (_) => DreamBloc(analysisRepository: analysisRepository)),
     ],
-    child: MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => AuthBloc(authRepository)..add(AuthEventAppStarted())),
-        BlocProvider(create: (_) => DreamBloc(authRepository, dreamRepository)),
-      ],
-      child: const App(),
-    ),
+    child: const DreamApp(),
   ));
 }

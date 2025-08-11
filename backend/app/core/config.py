@@ -1,12 +1,10 @@
-from pydantic import BaseSettings
-import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    OPENAI_API_KEY: str | None = None
-    FIREBASE_CREDENTIALS: str | None = None
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8080,http://localhost:8000"
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
 
-    class Config:
-        env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+    OPENAI_API_KEY: str | None = None
+    OPENAI_MODEL: str = 'gpt-4o-mini'
+    FIREBASE_CREDENTIALS_JSON: str | None = None
 
 settings = Settings()

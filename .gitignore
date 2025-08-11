@@ -1,51 +1,29 @@
-# Flutter
-**/build/
-**/.dart_tool/
-**/.flutter-plugins
-**/.flutter-plugins-dependencies
-**/.packages
-**/pubspec.lock
-**/ios/Flutter/Flutter.framework
-**/ios/Flutter/Flutter.podspec
-**/ios/.symlinks
-**/ios/Pods
-**/ios/.generated
-**/android/.gradle
-**/android/app/debug
-**/android/app/profile
-**/android/app/release
-**/.metadata
-
-# Dart
-*.log
-*.tmp
-
-# VS Code
-.vscode/
-
-# IntelliJ
-*.iml
-.idea/
-
-# macOS
+# Global ignores
 .DS_Store
+Thumbs.db
 
 # Python
-backend/.venv/
-**/__pycache__/
+__pycache__/
 *.pyc
-*.pyo
-*.pyd
-.eggs/
-*.egg-info/
-.pytest_cache/
-
-# Env
-backend/.env
+.venv/
+.env
 
 # Node
 node_modules/
 
-# Misc
-.env
-.venv/
+# Flutter/Dart
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool/
+build/
+.pub-cache/
+coverage/
+
+# VSCode/IDE
+.vscode/
+.idea/
+.gradle/
+
+# Docker
+**/.env
