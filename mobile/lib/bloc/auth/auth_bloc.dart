@@ -15,17 +15,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AppStarted>(_onAppStarted);
     on<SignInWithGoogleRequested>(_onGoogleSignIn);
     on<SignOutRequested>(_onSignOut);
+    on<AuthUserChanged>(_onUserChanged);
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
-    _sub?.cancel();
+    await _sub?.cancel();
     _sub = _auth.authStateChanges().listen((user) {
-      if (user != null) {
-        addStream(Stream.empty());
-      }
+      add(AuthUserChanged(user));
     });
     final user = _auth.currentUser;
+    if (user != null) {
+      emit(Authenticated(user));
+    } else {
+      emit(Unauthenticated());
+    }
+  }
+
+  Future<void> _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) async {
+    final user = event.user;
     if (user != null) {
       emit(Authenticated(user));
     } else {
