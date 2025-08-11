@@ -1,41 +1,67 @@
 from __future__ import annotations
+from typing import Dict, List
+import re
+import os
+from . import firebase_auth  # noqa: F401  # reserved for future context
 
-import asyncio
-from app.core.config import settings
-
+# Optional OpenAI support
+_OPENAI_AVAILABLE = False
 try:
-    from openai import AsyncOpenAI  # type: ignore
-except Exception:  # pragma: no cover
-    AsyncOpenAI = None
+    from openai import OpenAI  # type: ignore
+    _OPENAI_AVAILABLE = True
+except Exception:
+    _OPENAI_AVAILABLE = False
 
+class DreamAI:
+    def __init__(self, api_key: str | None = None) -> None:
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.client = OpenAI(api_key=self.api_key) if (_OPENAI_AVAILABLE and self.api_key) else None
 
-async def analyze_dream(dream: str) -> str:
-    """Analyze a dream using OpenAI if configured, else a simple heuristic.
-    """
-    if settings.OPENAI_API_KEY and AsyncOpenAI:
-        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    async def analyze(self, text: str, language: str = "en") -> Dict:
+        if self.client is None:
+            return self._heuristic_analysis(text)
+        # OpenAI structured prompt
         prompt = (
-            "You are a thoughtful therapist. Analyze the following dream in 5 short bullet points, "
-            "include possible symbolism, emotions, and actionable reflection prompts. Dream: "
-            f"{dream}"
+            "You are a psychologist specializing in dream interpretation. "
+            "Return a concise JSON object with keys: summary, symbols (array), themes (array), sentiment, advice. "
+            f"Language: {language}. Dream: " + text
         )
-        resp = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
+        try:
+            resp = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+            )
+            content = resp.choices[0].message.content or ""
+            # naive JSON extraction fallback
+            import json
+            start = content.find('{')
+            end = content.rfind('}')
+            if start != -1 and end != -1 and end > start:
+                return json.loads(content[start:end+1])
+            return {"summary": content.strip(), "symbols": [], "themes": [], "sentiment": None, "advice": None}
+        except Exception:
+            # Fall back to heuristic method if OpenAI fails
+            return self._heuristic_analysis(text)
+
+    def _heuristic_analysis(self, text: str) -> Dict:
+        words = re.findall(r"[A-Za-z']+", text.lower())
+        symbols: List[str] = []
+        for key in ["water", "fall", "fly", "chase", "door", "mirror", "teeth", "exam", "snake", "cat", "dog", "baby", "death"]:
+            if key in text.lower():
+                symbols.append(key)
+        themes: List[str] = []
+        if any(k in words for k in ["running", "chase", "escape", "hide"]):
+            themes.append("avoidance/fear")
+        if any(k in words for k in ["fly", "flying", "float"]):
+            themes.append("freedom/aspiration")
+        if any(k in words for k in ["exam", "test", "late"]):
+            themes.append("performance/anxiety")
+        sentiment = "unsettling" if any(k in words for k in ["scared", "fear", "anxious", "lost"]) else "neutral"
+        summary = (
+            "This dream likely touches on "
+            + (", ".join(themes) if themes else "general subconscious processing")
+            + "."
         )
-        return resp.choices[0].message.content or "No analysis returned."
-    # fallback simple analysis
-    await asyncio.sleep(0.2)
-    themes = []
-    text = dream.lower()
-    if any(w in text for w in ["fly", "flying", "flight"]):
-        themes.append("Desire for freedom or rising above challenges")
-    if any(w in text for w in ["fall", "falling"]):
-        themes.append("Feeling a loss of control or fear of failure")
-    if any(w in text for w in ["chase", "chased", "pursuit"]):
-        themes.append("Avoidance of unresolved issues or stressors")
-    if not themes:
-        themes.append("Processing recent memories and emotions")
-    bullets = "\n".join(f"- {t}" for t in themes)
-    return f"Preliminary analysis (offline):\n{bullets}\n\nReflection: What emotions did you feel most strongly during the dream?"
+        advice = "Reflect on recent stressors and consider journaling your emotions upon waking."
+        return {"summary": summary, "symbols": symbols, "themes": themes, "sentiment": sentiment, "advice": advice}

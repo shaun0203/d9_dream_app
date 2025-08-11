@@ -1,36 +1,26 @@
 part of 'dream_bloc.dart';
 
-enum DreamStatus { idle, submitting, success, failure }
+abstract class DreamState extends Equatable {
+  @override
+  List<Object?> get props => [];
+}
 
-class DreamState extends Equatable {
-  const DreamState({
-    this.dreamText = '',
-    this.analysis = '',
-    this.status = DreamStatus.idle,
-    this.listening = false,
-    this.error,
-  });
+class DreamStateIdle extends DreamState {}
 
-  final String dreamText;
-  final String analysis;
-  final DreamStatus status;
-  final bool listening;
-  final String? error;
+class DreamStateLoading extends DreamState {}
 
-  DreamState copyWith({
-    String? dreamText,
-    String? analysis,
-    DreamStatus? status,
-    bool? listening,
-    String? error,
-  }) => DreamState(
-        dreamText: dreamText ?? this.dreamText,
-        analysis: analysis ?? this.analysis,
-        status: status ?? this.status,
-        listening: listening ?? this.listening,
-        error: error,
-      );
+class DreamStateSuccess extends DreamState {
+  final Map<String, dynamic> analysis;
+  DreamStateSuccess(this.analysis);
 
   @override
-  List<Object?> get props => [dreamText, analysis, status, listening, error];
+  List<Object?> get props => [analysis];
+}
+
+class DreamStateFailure extends DreamState {
+  final String message;
+  DreamStateFailure(this.message);
+
+  @override
+  List<Object?> get props => [message];
 }

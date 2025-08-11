@@ -1,14 +1,12 @@
-from pydantic_settings import BaseSettings
+from pydantic import BaseSettings
+import os
 
 class Settings(BaseSettings):
-    AUTH_MODE: str = "none"  # 'firebase' or 'none'
-    FIREBASE_PROJECT_ID: str | None = None
-    GOOGLE_APPLICATION_CREDENTIALS: str | None = None
     OPENAI_API_KEY: str | None = None
-    CORS_ORIGINS: str = "*"
+    FIREBASE_CREDENTIALS: str | None = None
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8080,http://localhost:8000"
 
     class Config:
-        env_file = ".env"
-        case_sensitive = True
+        env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
 
 settings = Settings()

@@ -1,7 +1,16 @@
 from pydantic import BaseModel, Field
+from typing import List, Optional
 
-class DreamRequest(BaseModel):
-    dream: str = Field(..., min_length=3, description="User's dream text")
+class AnalyzeRequest(BaseModel):
+    text: str = Field(..., min_length=1)
+    language: str = Field(default="en")
 
-class DreamResponse(BaseModel):
-    analysis: str
+class Analysis(BaseModel):
+    summary: str
+    symbols: List[str] = []
+    themes: List[str] = []
+    sentiment: Optional[str] = None
+    advice: Optional[str] = None
+
+class AnalyzeResponse(BaseModel):
+    analysis: Analysis
