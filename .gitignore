@@ -1,0 +1,16 @@
+# Root Git ignore
+# macOS/Linux/Windows
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Flutter multi
+# See also mobile/.gitignore

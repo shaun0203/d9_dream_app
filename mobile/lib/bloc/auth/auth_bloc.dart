@@ -14,6 +14,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSignInAnonRequested>(_onAnon);
     on<AuthSignInEmailRequested>(_onEmail);
     on<AuthSignOutRequested>(_onSignOut);
+    on<_AuthUserChanged>(_onAuthUserChanged);
   }
 
   final AuthRepository _authRepository;
